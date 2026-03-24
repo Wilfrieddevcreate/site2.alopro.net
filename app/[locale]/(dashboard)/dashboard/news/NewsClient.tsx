@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocale } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
 
 const PAGE_SIZE = 20;
 
-interface NewsData { id: string; title: string; description: string; imageUrl: string; createdAt: string; }
+interface NewsData { id: string; title: string; description: string; imageUrl: string; createdAt: string; imageCount?: number; }
 
 export default function NewsClient() {
   const locale = useLocale();
@@ -62,17 +63,24 @@ export default function NewsClient() {
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {news.map((n) => (
-            <div key={n.id} className="card-dark overflow-hidden group cursor-pointer">
-              <div className="h-44 bg-white/5 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+            <Link key={n.id} href={`/dashboard/news/${n.id}`} className="card-dark overflow-hidden group cursor-pointer hover:border-primary/20 transition-all block">
+              <div className="h-44 bg-white/5 overflow-hidden relative">
                 <img src={n.imageUrl} alt={n.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                {(n.imageCount || 0) > 1 && (
+                  <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+                    +{(n.imageCount || 1) - 1}
+                  </span>
+                )}
               </div>
               <div className="p-5">
                 <h3 className="font-semibold text-white leading-snug">{n.title}</h3>
                 <p className="mt-2 text-sm text-white/40 line-clamp-2 leading-relaxed">{n.description}</p>
-                <p className="mt-3 text-xs text-white/20">{n.createdAt.split("T")[0]}</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs text-white/20">{n.createdAt.split("T")[0]}</p>
+                  <span className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Read more →</span>
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

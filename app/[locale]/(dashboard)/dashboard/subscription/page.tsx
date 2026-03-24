@@ -12,6 +12,7 @@ export default async function SubscriptionPage() {
     select: {
       trialEndsAt: true,
       stripeCustomerId: true,
+      telegramChatId: true,
       subscriptions: {
         orderBy: { createdAt: "desc" },
         select: {
@@ -40,6 +41,7 @@ export default async function SubscriptionPage() {
         createdAt: activeSub.createdAt.toISOString(),
       } : null}
       hasStripeCustomer={!!user.stripeCustomerId}
+      hasTelegram={!!user.telegramChatId}
       trialEndsAt={user.trialEndsAt?.toISOString() || null}
       history={user.subscriptions.map((s) => ({
         ...s,

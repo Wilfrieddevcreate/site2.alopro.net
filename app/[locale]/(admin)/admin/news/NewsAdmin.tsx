@@ -12,7 +12,8 @@ const LANGS = [
   { code: "tr", label: "TR", flag: "tr" },
 ];
 
-interface NewsData { id: string; title: string; description: string; imageUrl: string; active: boolean; createdAt: string; }
+interface NewsImage { id: string; url: string; sortOrder: number; }
+interface NewsData { id: string; title: string; description: string; imageUrl: string; active: boolean; createdAt: string; images?: NewsImage[]; }
 
 export default function NewsAdmin() {
   const [news, setNews] = useState<NewsData[]>([]);
@@ -24,6 +25,8 @@ export default function NewsAdmin() {
   const [translating, setTranslating] = useState(false);
   const [translated, setTranslated] = useState(false);
   const [formLang, setFormLang] = useState("fr");
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
   const pageRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -63,6 +66,43 @@ export default function NewsAdmin() {
   }, [hasMore, loading, fetchNews]);
 
   function reload() { pageRef.current = 0; fetchNews(0, false); }
+
+  async function handleUploadImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const urls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith("image/")) { toast.error(`${file.name} is not an image`); continue; }
+      if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} is too large (max 5MB)`); continue; }
+
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+        if (res.ok) {
+          const { url } = await res.json();
+          urls.push(url);
+        } else {
+          toast.error(`Failed to upload ${file.name}`);
+        }
+      } catch {
+        toast.error(`Error uploading ${file.name}`);
+      }
+    }
+
+    setUploadedImages((prev) => [...prev, ...urls]);
+    setUploading(false);
+    if (urls.length > 0) toast.success(`${urls.length} image${urls.length > 1 ? "s" : ""} uploaded`);
+    e.target.value = "";
+  }
+
+  function removeImage(index: number) {
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleTranslate() {
     if (!formRef.current) return;
@@ -104,28 +144,11 @@ export default function NewsAdmin() {
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (uploadedImages.length === 0) { toast.error("Please upload at least one image"); return; }
+
     setCreating(true);
     const fd = new FormData(e.currentTarget);
-    let imageUrl = fd.get("imageUrl") as string;
-    const file = fd.get("imageFile") as File;
 
-    if (file && file.size > 0) {
-      const uploadData = new FormData();
-      uploadData.append("file", file);
-      const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: uploadData });
-      if (uploadRes.ok) {
-        const { url } = await uploadRes.json();
-        imageUrl = url;
-      } else {
-        toast.error("Image upload failed");
-        setCreating(false);
-        return;
-      }
-    }
-
-    if (!imageUrl) { toast.error("Please provide an image"); setCreating(false); return; }
-
-    // FR is the base language, EN fallback to FR if not translated
     const titleFrVal = fd.get("title_fr") as string;
     const descFrVal = fd.get("description_fr") as string;
     const title = (fd.get("title_en") as string) || titleFrVal;
@@ -136,19 +159,16 @@ export default function NewsAdmin() {
     await fetch("/api/admin/news", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title,
-        description,
-        titleFr: titleFrVal,
-        descriptionFr: descFrVal,
-        titleEs: fd.get("title_es") || null,
-        descriptionEs: fd.get("description_es") || null,
-        titleTr: fd.get("title_tr") || null,
-        descriptionTr: fd.get("description_tr") || null,
-        imageUrl,
+        title, description,
+        titleFr: titleFrVal, descriptionFr: descFrVal,
+        titleEs: fd.get("title_es") || null, descriptionEs: fd.get("description_es") || null,
+        titleTr: fd.get("title_tr") || null, descriptionTr: fd.get("description_tr") || null,
+        imageUrls: uploadedImages,
       }),
     });
     setCreating(false);
     setShowForm(false);
+    setUploadedImages([]);
     showSuccess("Published", "News article has been published in all languages.");
     reload();
   }
@@ -171,7 +191,7 @@ export default function NewsAdmin() {
     <div className="pt-8 lg:pt-0">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">News <span className="text-white/30 text-lg">({total})</span></h1>
-        <button onClick={() => { setShowForm(!showForm); setTranslated(false); setFormLang("fr"); }} className="btn-glow rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
+        <button onClick={() => { setShowForm(!showForm); setTranslated(false); setFormLang("fr"); setUploadedImages([]); }} className="btn-glow rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover">
           {showForm ? "Cancel" : "+ New Article"}
         </button>
       </div>
@@ -195,24 +215,53 @@ export default function NewsAdmin() {
             <div key={l.code} className={formLang === l.code ? "space-y-4" : "hidden"}>
               <div>
                 <label className="block text-xs text-white/30 uppercase tracking-wider mb-2">
-                  Title ({l.label}) {l.code === "en" && <span className="text-red-400">*</span>}
+                  Title ({l.label}) {l.code === "fr" && <span className="text-red-400">*</span>}
                 </label>
                 <input name={`title_${l.code}`} required={l.code === "fr"} placeholder={`Title in ${l.label}...`} className={inputClass} />
               </div>
               <div>
                 <label className="block text-xs text-white/30 uppercase tracking-wider mb-2">
-                  Description ({l.label}) {l.code === "en" && <span className="text-red-400">*</span>}
+                  Description ({l.label}) {l.code === "fr" && <span className="text-red-400">*</span>}
                 </label>
                 <textarea name={`description_${l.code}`} required={l.code === "fr"} rows={4} placeholder={`Description in ${l.label}...`} className={`${inputClass} resize-none`} />
               </div>
             </div>
           ))}
 
-          {/* Image (shared) */}
+          {/* Multi image upload */}
           <div>
-            <label className="block text-xs text-white/30 uppercase tracking-wider mb-2">Image (shared for all languages)</label>
-            <input name="imageFile" type="file" accept="image/*" className="block w-full text-sm text-white/50 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/15 file:text-primary hover:file:bg-primary/25 file:cursor-pointer mb-2" />
-            <input name="imageUrl" placeholder="Or paste an image URL..." className={inputClass} />
+            <label className="block text-xs text-white/30 uppercase tracking-wider mb-2">
+              Images <span className="text-red-400">*</span> <span className="text-white/15 normal-case">(max 5MB each, multiple allowed)</span>
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleUploadImages}
+              disabled={uploading}
+              className="block w-full text-sm text-white/50 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/15 file:text-primary hover:file:bg-primary/25 file:cursor-pointer"
+            />
+            {uploading && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs text-primary">Uploading...</span>
+              </div>
+            )}
+
+            {/* Preview */}
+            {uploadedImages.length > 0 && (
+              <div className="flex gap-3 mt-3 flex-wrap">
+                {uploadedImages.map((url, i) => (
+                  <div key={i} className="relative group">
+                    <img src={url} alt={`Image ${i + 1}`} className="h-20 w-20 rounded-xl object-cover border border-white/10" />
+                    <button type="button" onClick={() => removeImage(i)} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    {i === 0 && <span className="absolute bottom-0.5 left-0.5 rounded bg-primary/80 px-1 text-[8px] font-bold text-white">MAIN</span>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 flex-wrap">
@@ -225,7 +274,7 @@ export default function NewsAdmin() {
                 <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" /></svg> Translate from FR</>
               )}
             </button>
-            <button type="submit" disabled={creating} className="btn-glow rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50">
+            <button type="submit" disabled={creating || uploadedImages.length === 0} className="btn-glow rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50">
               {creating ? "Publishing..." : "Publish"}
             </button>
           </div>
@@ -235,9 +284,13 @@ export default function NewsAdmin() {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
         {news.map((n) => (
           <div key={n.id} className="card-dark overflow-hidden">
-            <div className="h-36 bg-white/5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={n.imageUrl} alt={n.title} className="h-full w-full object-cover" />
+            <div className="h-36 bg-white/5 relative">
+              <img src={n.images?.[0]?.url || n.imageUrl} alt={n.title} className="h-full w-full object-cover" />
+              {(n.images?.length || 0) > 1 && (
+                <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+                  +{(n.images?.length || 1) - 1}
+                </span>
+              )}
             </div>
             <div className="p-4">
               <h3 className="text-sm font-semibold text-white mb-1">{n.title}</h3>

@@ -81,7 +81,7 @@ export default async function NotificationDetailPage({ params }: { params: Promi
       relatedNews={relatedNews ? {
         title: relatedNews.title,
         description: relatedNews.description,
-        imageUrl: relatedNews.imageUrl,
+        imageUrl: relatedNews.imageUrl || "",
         createdAt: relatedNews.createdAt.toISOString(),
       } : null}
     />

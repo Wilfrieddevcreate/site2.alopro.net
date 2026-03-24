@@ -14,11 +14,14 @@ export async function GET(request: Request) {
   const where = { active: true };
 
   const [items, total] = await Promise.all([
-    prisma.news.findMany({ where, skip, take, orderBy: { createdAt: "desc" } }),
+    prisma.news.findMany({
+      where, skip, take,
+      orderBy: { createdAt: "desc" },
+      include: { images: { orderBy: { sortOrder: "asc" }, take: 1 }, _count: { select: { images: true } } },
+    }),
     prisma.news.count({ where }),
   ]);
 
-  // Return localized content based on locale
   const localizedItems = items.map((n) => {
     let title = n.title;
     let description = n.description;
@@ -31,7 +34,8 @@ export async function GET(request: Request) {
       id: n.id,
       title,
       description,
-      imageUrl: n.imageUrl,
+      imageUrl: n.images[0]?.url || n.imageUrl || "",
+      imageCount: n._count.images || (n.imageUrl ? 1 : 0),
       createdAt: n.createdAt.toISOString(),
     };
   });

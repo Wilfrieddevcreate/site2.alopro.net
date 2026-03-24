@@ -14,7 +14,11 @@ export async function GET(request: Request) {
   const take = parseInt(url.searchParams.get("take") || "10");
 
   const [items, total] = await Promise.all([
-    prisma.news.findMany({ skip, take, orderBy: { createdAt: "desc" } }),
+    prisma.news.findMany({
+      skip, take,
+      orderBy: { createdAt: "desc" },
+      include: { images: { orderBy: { sortOrder: "asc" } } },
+    }),
     prisma.news.count(),
   ]);
 
@@ -26,27 +30,33 @@ export async function POST(request: Request) {
   if (error) return error;
 
   try {
-    const { title, description, imageUrl, titleFr, descriptionFr, titleEs, descriptionEs, titleTr, descriptionTr } = await request.json();
-    if (!title || !description || !imageUrl) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const { title, description, imageUrls, titleFr, descriptionFr, titleEs, descriptionEs, titleTr, descriptionTr } = await request.json();
+    if (!title || !description) {
+      return NextResponse.json({ error: "Title and description are required" }, { status: 400 });
+    }
+
+    if (!imageUrls || imageUrls.length === 0) {
+      return NextResponse.json({ error: "At least one image is required" }, { status: 400 });
     }
 
     const news = await prisma.news.create({
       data: {
-        title, description, imageUrl, active: true,
+        title, description,
+        imageUrl: imageUrls[0], // First image as main
+        active: true,
         titleFr: titleFr || null, descriptionFr: descriptionFr || null,
         titleEs: titleEs || null, descriptionEs: descriptionEs || null,
         titleTr: titleTr || null, descriptionTr: descriptionTr || null,
+        images: {
+          create: imageUrls.map((url: string, i: number) => ({ url, sortOrder: i })),
+        },
       },
+      include: { images: true },
     });
 
-    // DB notification (visible in bell)
+    // Notifications
     notifyBroadcast(`New Article: ${title}`, description.slice(0, 100) + (description.length > 100 ? "..." : ""), "news").catch(console.error);
-
-    // Push notification (browser)
     sendPushToAll({ title: "New Article", message: title, url: "/dashboard" }).catch(console.error);
-
-    // Telegram
     sendNewsToTelegram({ title, description }).catch(console.error);
 
     return NextResponse.json({ news });

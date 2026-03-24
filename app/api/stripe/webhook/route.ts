@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { stripe } from "@/app/lib/stripe";
+import { stripe, getSubscriptionPeriod } from "@/app/lib/stripe";
 import { prisma } from "@/app/lib/prisma";
 import type Stripe from "stripe";
 import { notifyUser, notifyAdmins } from "@/app/lib/notifications";
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
         }
 
         // Get subscription details from Stripe
-        const stripeSub = await stripe.subscriptions.retrieve(stripeSubId) as unknown as { current_period_start: number; current_period_end: number };
+        const stripePeriod = await getSubscriptionPeriod(stripeSubId);
         const user = await prisma.user.findUnique({
           where: { id: userId },
           select: { id: true, firstName: true, lastName: true, email: true, trialEndsAt: true },
@@ -71,8 +71,8 @@ export async function POST(request: Request) {
         if (!user) break;
 
         const subscriptionType = type === "MANAGED" ? "MANAGED" as const : "SIGNALS" as const;
-        const periodStart = new Date(stripeSub.current_period_start * 1000);
-        const periodEnd = new Date(stripeSub.current_period_end * 1000);
+        const periodStart = stripePeriod.start;
+        const periodEnd = stripePeriod.end;
         const amount = (session.amount_total || 0) / 100;
         const planLabel = subscriptionType === "MANAGED" ? "Managed Trading" : "Signals";
 
@@ -118,9 +118,13 @@ export async function POST(request: Request) {
           },
         });
 
+        // Check telegram
+        const userTg = await prisma.user.findUnique({ where: { id: userId }, select: { telegramChatId: true } });
+        const tgMsg = !userTg?.telegramChatId ? " Connect your Telegram in Settings to receive real-time signals!" : "";
+
         // Notifications
         await notifyUser(userId, "Subscription activated",
-          `Your ${planLabel} subscription is now active. Next billing: ${periodEnd.toLocaleDateString("en-US")}.`,
+          `Your ${planLabel} subscription is now active. Next billing: ${periodEnd.toLocaleDateString("en-US")}.${tgMsg}`,
           "system"
         );
         await notifyAdmins("New subscription",
@@ -165,13 +169,13 @@ export async function POST(request: Request) {
         if (!sub) break;
 
         // Update subscription period
-        const stripeSub = await stripe.subscriptions.retrieve(stripeSubId) as unknown as { current_period_start: number; current_period_end: number };
+        const stripePeriod = await getSubscriptionPeriod(stripeSubId);
         await prisma.subscription.update({
           where: { id: sub.id },
           data: {
             status: "ACTIVE",
-            currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
-            currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+            currentPeriodStart: stripePeriod.start,
+            currentPeriodEnd: stripePeriod.end,
           },
         });
 
@@ -205,7 +209,7 @@ export async function POST(request: Request) {
 
         // Notify
         await notifyUser(sub.userId, "Payment successful",
-          `Your subscription has been renewed. Next billing: ${new Date(stripeSub.current_period_end * 1000).toLocaleDateString("en-US")}.`,
+          `Your subscription has been renewed. Next billing: ${stripePeriod.end.toLocaleDateString("en-US")}.`,
           "system"
         );
 
@@ -268,12 +272,14 @@ export async function POST(request: Request) {
             : stripeSub.status === "canceled" ? "CANCELLED" as const
             : "EXPIRED" as const;
 
+          const period = await getSubscriptionPeriod(stripeSub.id);
+
           await prisma.subscription.update({
             where: { id: sub.id },
             data: {
               status: newStatus,
-              currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
-              currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+              currentPeriodStart: period.start,
+              currentPeriodEnd: period.end,
               ...(newStatus === "CANCELLED" ? { cancelledAt: new Date() } : {}),
             },
           });

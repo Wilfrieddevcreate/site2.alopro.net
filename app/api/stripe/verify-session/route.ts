@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
-import { stripe } from "@/app/lib/stripe";
+import { stripe, getSubscriptionPeriod } from "@/app/lib/stripe";
 import { notifyUser, notifyAdmins } from "@/app/lib/notifications";
+import { createCommission } from "@/app/lib/commission";
 
-/**
- * Verifies Stripe checkout session after redirect.
- * Creates subscription if webhook hasn't fired yet (safety net for local dev).
- */
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
@@ -16,7 +13,6 @@ export async function POST(request: Request) {
     const { sessionId } = await request.json();
     if (!sessionId) return NextResponse.json({ error: "Missing session ID" }, { status: 400 });
 
-    // Retrieve checkout session from Stripe
     const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
     if (checkoutSession.payment_status !== "paid") {
       return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
@@ -38,8 +34,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid session" }, { status: 400 });
     }
 
-    // Get subscription details from Stripe
-    const stripeSub = await stripe.subscriptions.retrieve(stripeSubId) as unknown as { current_period_start: number; current_period_end: number };
+    // Get period from Stripe
+    const period = await getSubscriptionPeriod(stripeSubId);
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true, email: true },
@@ -48,8 +45,6 @@ export async function POST(request: Request) {
 
     const subscriptionType = type === "MANAGED" ? "MANAGED" as const : "SIGNALS" as const;
     const planLabel = subscriptionType === "MANAGED" ? "Managed Trading" : "Signals";
-    const periodStart = new Date(stripeSub.current_period_start * 1000);
-    const periodEnd = new Date(stripeSub.current_period_end * 1000);
     const amount = (checkoutSession.amount_total || 0) / 100;
 
     // Create subscription
@@ -60,8 +55,8 @@ export async function POST(request: Request) {
         status: "ACTIVE",
         stripeSubscriptionId: stripeSubId,
         stripePriceId: checkoutSession.metadata?.planId || null,
-        currentPeriodStart: periodStart,
-        currentPeriodEnd: periodEnd,
+        currentPeriodStart: period.start,
+        currentPeriodEnd: period.end,
       },
     });
 
@@ -74,6 +69,20 @@ export async function POST(request: Request) {
     const suffix = crypto.randomBytes(2).toString("hex");
     const invoiceNumber = `KDX-${year}-${String(count + 1).padStart(4, "0")}-${suffix}`;
 
+    // Get receipt URL
+    let stripeReceiptUrl: string | null = null;
+    if (checkoutSession.payment_intent) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(checkoutSession.payment_intent as string);
+        if ((pi as any).latest_charge) {
+          const charge = await stripe.charges.retrieve((pi as any).latest_charge as string);
+          stripeReceiptUrl = (charge as any).receipt_url || null;
+        }
+      } catch (e) {
+        console.error("Failed to get receipt URL:", e);
+      }
+    }
+
     await prisma.invoice.create({
       data: {
         userId,
@@ -83,18 +92,37 @@ export async function POST(request: Request) {
         plan: planLabel,
         status: "paid",
         stripePaymentId: checkoutSession.payment_intent as string || null,
+        stripeReceiptUrl,
       },
     });
 
+    // Check if user has telegram connected
+    const userTg = await prisma.user.findUnique({ where: { id: userId }, select: { telegramChatId: true } });
+    const tgMessage = !userTg?.telegramChatId
+      ? " Connect your Telegram in Settings to receive real-time signals!"
+      : "";
+
     // Notifications
     await notifyUser(userId, "Subscription activated",
-      `Your ${planLabel} subscription is now active. Next billing: ${periodEnd.toLocaleDateString("en-US")}.`,
+      `Your ${planLabel} subscription is now active. Next billing: ${period.end.toLocaleDateString("en-US")}.${tgMessage}`,
       "system"
     );
     await notifyAdmins("New subscription",
       `${user.firstName} ${user.lastName} (${user.email}) subscribed to ${planLabel} for ${amount.toFixed(2)}€.`,
       "system"
     );
+
+    // Commission
+    try {
+      await createCommission({
+        subscriptionId: subscription.id,
+        grossAmount: amount,
+        stripePaymentId: checkoutSession.payment_intent as string || undefined,
+        referredUserId: userId,
+      });
+    } catch (err) {
+      console.error("Commission creation error:", err);
+    }
 
     return NextResponse.json({ status: "created", subscription });
   } catch (error) {

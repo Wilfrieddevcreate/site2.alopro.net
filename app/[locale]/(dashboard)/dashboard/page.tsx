@@ -76,7 +76,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         if (locale === "fr" && n.titleFr) { title = n.titleFr; description = n.descriptionFr || n.description; }
         else if (locale === "es" && n.titleEs) { title = n.titleEs; description = n.descriptionEs || n.description; }
         else if (locale === "tr" && n.titleTr) { title = n.titleTr; description = n.descriptionTr || n.description; }
-        return { id: n.id, title, description, imageUrl: n.imageUrl, createdAt: n.createdAt.toISOString() };
+        return { id: n.id, title, description, imageUrl: n.imageUrl || "", createdAt: n.createdAt.toISOString() };
       })}
     />
   );
