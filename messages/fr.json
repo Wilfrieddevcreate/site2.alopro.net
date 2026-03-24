@@ -91,7 +91,8 @@
       "affiliation": "Affiliation",
       "subscription": "Abonnement",
       "invoices": "Factures",
-      "settings": "Paramètres"
+      "settings": "Paramètres",
+      "logout": "Déconnexion"
     },
     "header": {
       "logout": "Déconnexion"

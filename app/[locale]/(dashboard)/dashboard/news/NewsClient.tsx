@@ -2,17 +2,19 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocale } from "next-intl";
-import { Link } from "@/app/i18n/navigation";
+import NewsDetailModal from "@/app/[locale]/components/NewsDetailModal";
 
 const PAGE_SIZE = 20;
 
-interface NewsData { id: string; title: string; description: string; imageUrl: string; createdAt: string; imageCount?: number; }
+interface NewsData { id: string; title: string; description: string; imageUrl: string; createdAt: string; imageCount?: number; images?: string[]; }
 
 export default function NewsClient() {
   const locale = useLocale();
   const [news, setNews] = useState<NewsData[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [selectedNews, setSelectedNews] = useState<{ id: string; title: string; description: string; images: string[]; date: string } | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
   const pageRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -29,7 +31,7 @@ export default function NewsClient() {
       setHasMore(items.length === PAGE_SIZE);
     } catch { /* ignore */ }
     setLoading(false);
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (!initialLoaded.current) { initialLoaded.current = true; fetchNews(0, false); }
@@ -47,6 +49,31 @@ export default function NewsClient() {
     return () => observerRef.current?.disconnect();
   }, [hasMore, loading, fetchNews]);
 
+  async function openNewsDetail(n: NewsData) {
+    setLoadingDetail(n.id);
+    try {
+      const res = await fetch(`/api/user/news/${n.id}?locale=${locale}`);
+      const data = await res.json();
+      setSelectedNews({
+        id: n.id,
+        title: data.title || n.title,
+        description: data.description || n.description,
+        images: data.images || (n.imageUrl ? [n.imageUrl] : []),
+        date: n.createdAt,
+      });
+    } catch {
+      // Fallback to card data
+      setSelectedNews({
+        id: n.id,
+        title: n.title,
+        description: n.description,
+        images: n.imageUrl ? [n.imageUrl] : [],
+        date: n.createdAt,
+      });
+    }
+    setLoadingDetail(null);
+  }
+
   return (
     <div className="pt-8 lg:pt-0">
       <h1 className="text-2xl font-bold text-white mb-6">News</h1>
@@ -63,13 +90,18 @@ export default function NewsClient() {
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
           {news.map((n) => (
-            <Link key={n.id} href={`/dashboard/news/${n.id}`} className="card-dark overflow-hidden group cursor-pointer hover:border-primary/20 transition-all block">
+            <div key={n.id} onClick={() => openNewsDetail(n)} className="card-dark overflow-hidden group cursor-pointer hover:border-primary/20 transition-all">
               <div className="h-44 bg-white/5 overflow-hidden relative">
                 <img src={n.imageUrl} alt={n.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                 {(n.imageCount || 0) > 1 && (
                   <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
                     +{(n.imageCount || 1) - 1}
                   </span>
+                )}
+                {loadingDetail === n.id && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
                 )}
               </div>
               <div className="p-5">
@@ -80,7 +112,7 @@ export default function NewsClient() {
                   <span className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Read more →</span>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
@@ -91,6 +123,9 @@ export default function NewsClient() {
         </div>
       )}
       {!hasMore && news.length > 0 && <p className="text-center text-xs text-white/20 py-4">All news loaded</p>}
+
+      {/* News Detail Modal */}
+      <NewsDetailModal news={selectedNews} onClose={() => setSelectedNews(null)} />
     </div>
   );
 }

@@ -65,14 +65,16 @@ export async function POST(request: Request) {
     const notifTitle = `TP${target.rank} Reached: ${pair}`;
     const notifMsg = `Take Profit ${target.rank} at ${target.price} has been reached for ${pair}!`;
 
+    const callLink = `/dashboard?tab=calls&callId=${target.call.id}`;
+
     // DB notification (bell)
-    notifyBroadcast(notifTitle, notifMsg, "call").catch(console.error);
+    notifyBroadcast(notifTitle, notifMsg, "call", callLink).catch(console.error);
 
     // Push notification (browser)
     sendPushToAll({
       title: `🎯 ${notifTitle}`,
       message: notifMsg,
-      url: "/dashboard",
+      url: callLink,
     }).catch(console.error);
 
     // Telegram

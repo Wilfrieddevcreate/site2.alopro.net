@@ -266,11 +266,11 @@ export default function UsersClient() {
                     </div>
                     <div>
                       <div className="text-[10px] font-medium text-white/20 uppercase tracking-wider mb-1">Joined</div>
-                      <div className="text-sm text-white/60">{new Date(u.createdAt).toLocaleDateString()}</div>
+                      <div className="text-sm text-white/60">{new Date(u.createdAt).toLocaleDateString("en-GB")}</div>
                     </div>
                     <div>
                       <div className="text-[10px] font-medium text-white/20 uppercase tracking-wider mb-1">Trial ends</div>
-                      <div className="text-sm text-white/60">{u.trialEndsAt ? new Date(u.trialEndsAt).toLocaleDateString() : "—"}</div>
+                      <div className="text-sm text-white/60">{u.trialEndsAt ? new Date(u.trialEndsAt).toLocaleDateString("en-GB") : "—"}</div>
                     </div>
                     <div>
                       <div className="text-[10px] font-medium text-white/20 uppercase tracking-wider mb-1">Email verified</div>

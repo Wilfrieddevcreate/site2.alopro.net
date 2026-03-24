@@ -111,7 +111,7 @@ export default function NotificationsClient() {
                   <p className="text-sm font-semibold text-white">{n.title}</p>
                   <p className="text-xs text-white/35 mt-1 line-clamp-2">{n.message}</p>
                   <p className="text-[10px] text-white/15 mt-2">
-                    {new Date(n.createdAt).toLocaleDateString()} at {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {new Date(n.createdAt).toLocaleDateString("en-GB")} at {new Date(n.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
                 <svg className="h-4 w-4 text-white/10 shrink-0 mt-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

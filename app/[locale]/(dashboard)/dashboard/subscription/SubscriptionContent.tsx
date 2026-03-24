@@ -128,13 +128,13 @@ export default function SubscriptionContent({ activeSub, hasStripeCustomer, tria
                 </span>
               </div>
               <p className="text-sm text-white/40">
-                Started {new Date(activeSub.currentPeriodStart).toLocaleDateString()}
+                Started {new Date(activeSub.currentPeriodStart).toLocaleDateString("en-GB")}
               </p>
             </div>
             <div className="text-right">
               <div className="text-xs text-white/30 uppercase tracking-wider">Expires</div>
               <div className="text-base font-semibold text-white">
-                {new Date(activeSub.currentPeriodEnd).toLocaleDateString()}
+                {new Date(activeSub.currentPeriodEnd).toLocaleDateString("en-GB")}
               </div>
             </div>
           </div>
@@ -146,7 +146,7 @@ export default function SubscriptionContent({ activeSub, hasStripeCustomer, tria
               <div className="text-lg font-bold text-white mb-1">No active subscription</div>
               {trialEndsAt && new Date(trialEndsAt) > new Date() ? (
                 <p className="text-sm text-amber-400">
-                  Free trial until {new Date(trialEndsAt).toLocaleDateString()}
+                  Free trial until {new Date(trialEndsAt).toLocaleDateString("en-GB")}
                 </p>
               ) : (
                 <p className="text-sm text-white/40">Subscribe to access all features</p>
@@ -202,7 +202,7 @@ export default function SubscriptionContent({ activeSub, hasStripeCustomer, tria
                     {sub.type === "MANAGED" ? "Managed Trading" : "Signals"}
                   </div>
                   <div className="text-xs text-white/25">
-                    {new Date(sub.currentPeriodStart).toLocaleDateString()} — {new Date(sub.currentPeriodEnd).toLocaleDateString()}
+                    {new Date(sub.currentPeriodStart).toLocaleDateString("en-GB")} — {new Date(sub.currentPeriodEnd).toLocaleDateString("en-GB")}
                   </div>
                 </div>
                 <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${

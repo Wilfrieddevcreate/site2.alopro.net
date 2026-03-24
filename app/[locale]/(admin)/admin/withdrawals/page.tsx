@@ -45,7 +45,7 @@ export default function AdminWithdrawalsPage() {
         text: status === "COMPLETED" ? "Confirm that you have sent the payment." : `Mark as ${label.toLowerCase()}?`,
         icon: "question",
         showCancelButton: true,
-        confirmButtonColor: "#1ABAF0",
+        confirmButtonColor: "#14708E",
         confirmButtonText: `Yes, ${label.toLowerCase()}`,
         background: "#111",
         color: "#fff",
@@ -107,7 +107,7 @@ export default function AdminWithdrawalsPage() {
                     </div>
                     <div>
                       <div className="text-[10px] text-white/20 uppercase tracking-wider">Date</div>
-                      <div className="text-sm text-white/40">{new Date(w.createdAt).toLocaleDateString()}</div>
+                      <div className="text-sm text-white/40">{new Date(w.createdAt).toLocaleDateString("en-GB")}</div>
                     </div>
                   </div>
                   {w.adminNote && <p className="mt-2 text-xs text-white/25 italic">Note: {w.adminNote}</p>}

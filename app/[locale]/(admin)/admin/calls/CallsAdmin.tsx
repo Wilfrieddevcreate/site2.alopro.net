@@ -13,7 +13,7 @@ interface CallData {
   createdAt: string;
 }
 
-export default function CallsAdmin({ pairs }: { pairs: { id: string; label: string }[] }) {
+export default function CallsAdmin({ pairs: initialPairs }: { pairs: { id: string; label: string }[] }) {
   const [calls, setCalls] = useState<CallData[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -22,6 +22,42 @@ export default function CallsAdmin({ pairs }: { pairs: { id: string; label: stri
   const [creating, setCreating] = useState(false);
   const [targets, setTargets] = useState([{ rank: 1, price: "" }]);
   const [markingTp, setMarkingTp] = useState<string | null>(null);
+  const [pairs, setPairs] = useState(initialPairs);
+  const [pairSearch, setPairSearch] = useState("");
+  const [selectedPairId, setSelectedPairId] = useState(initialPairs[0]?.id || "");
+  const [showPairDropdown, setShowPairDropdown] = useState(false);
+  const [addingPair, setAddingPair] = useState(false);
+
+  const filteredPairs = pairSearch
+    ? pairs.filter((p) => p.label.toLowerCase().includes(pairSearch.toLowerCase()))
+    : pairs;
+
+  async function handleAddNewPair() {
+    const parts = pairSearch.toUpperCase().split("/");
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      toast.error("Format: BASE/QUOTE (ex: DOGE/USDT)");
+      return;
+    }
+    setAddingPair(true);
+    const res = await fetch("/api/admin/pairs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base: parts[0], quote: parts[1] }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const newPair = { id: data.pair.id, label: `${parts[0]}/${parts[1]}` };
+      setPairs((prev) => [...prev, newPair].sort((a, b) => a.label.localeCompare(b.label)));
+      setSelectedPairId(data.pair.id);
+      setPairSearch(newPair.label);
+      setShowPairDropdown(false);
+      toast.success(`${newPair.label} added!`);
+    } else {
+      const data = await res.json();
+      toast.error(data.error || "Failed to add pair");
+    }
+    setAddingPair(false);
+  }
   const pageRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -140,11 +176,38 @@ export default function CallsAdmin({ pairs }: { pairs: { id: string; label: stri
       {showForm && (
         <form onSubmit={handleCreate} className="card-dark p-6 mb-6">
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4">
-            <div>
+            <div className="relative">
               <label className="block text-xs text-white/30 uppercase tracking-wider mb-2">Pair</label>
-              <select name="pair" required className={`${inputClass} [&>option]:bg-black [&>option]:text-white`}>
-                {pairs.map((p) => <option key={p.id} value={p.id} className="bg-black text-white">{p.label}</option>)}
-              </select>
+              <input type="hidden" name="pair" value={selectedPairId} />
+              <input
+                type="text"
+                value={pairSearch}
+                onChange={(e) => { setPairSearch(e.target.value); setShowPairDropdown(true); }}
+                onFocus={() => setShowPairDropdown(true)}
+                placeholder="Search or type BTC/USDT..."
+                className={inputClass}
+                autoComplete="off"
+              />
+              {showPairDropdown && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-xl bg-[#0a0a0a] border border-white/10 max-h-48 overflow-y-auto shadow-xl">
+                  {filteredPairs.map((p) => (
+                    <button key={p.id} type="button" onClick={() => { setSelectedPairId(p.id); setPairSearch(p.label); setShowPairDropdown(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors ${selectedPairId === p.id ? "text-primary font-semibold" : "text-white/70"}`}>
+                      {p.label}
+                    </button>
+                  ))}
+                  {filteredPairs.length === 0 && pairSearch.includes("/") && (
+                    <button type="button" onClick={handleAddNewPair} disabled={addingPair}
+                      className="w-full text-left px-4 py-3 text-sm text-primary hover:bg-primary/10 transition-colors flex items-center gap-2">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                      {addingPair ? "Adding..." : `Add "${pairSearch.toUpperCase()}" as new pair`}
+                    </button>
+                  )}
+                  {filteredPairs.length === 0 && !pairSearch.includes("/") && (
+                    <div className="px-4 py-3 text-xs text-white/25">Type BASE/QUOTE to add a new pair</div>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs text-white/30 uppercase tracking-wider mb-2">Entry Min</label>
@@ -212,7 +275,7 @@ export default function CallsAdmin({ pairs }: { pairs: { id: string; label: stri
                 </div>
               ))}
             </div>
-            <div className="text-xs text-white/15 mt-3">{new Date(call.createdAt).toLocaleDateString()}</div>
+            <div className="text-xs text-white/15 mt-3">{new Date(call.createdAt).toLocaleDateString("en-GB")}</div>
           </div>
         ))}
       </div>

@@ -64,12 +64,13 @@ export async function POST(request: Request) {
 
       const notifTitle = `New Call: ${callInfo.pair}`;
       const notifMsg = `Entry: ${callInfo.entryMin} — ${callInfo.entryMax} | SL: ${callInfo.stopLoss}`;
+      const callLink = `/dashboard?tab=calls&callId=${call.id}`;
 
       // DB notification (visible in bell)
-      notifyBroadcast(notifTitle, notifMsg, "call").catch(console.error);
+      notifyBroadcast(notifTitle, notifMsg, "call", callLink).catch(console.error);
 
       // Push notification (browser)
-      sendPushToAll({ title: notifTitle, message: notifMsg, url: "/dashboard" }).catch(console.error);
+      sendPushToAll({ title: notifTitle, message: notifMsg, url: callLink }).catch(console.error);
 
       // Telegram
       sendCallToTelegram(callInfo).catch(console.error);

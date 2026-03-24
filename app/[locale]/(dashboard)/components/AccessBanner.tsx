@@ -12,7 +12,7 @@ interface Props {
 
 export default function AccessBanner({ status, trialEndsAt, subscriptionEndsAt, subscriptionType, daysLeft }: Props) {
   if (status === "trial" && trialEndsAt) {
-    const endDate = new Date(trialEndsAt).toLocaleDateString();
+    const endDate = new Date(trialEndsAt).toLocaleDateString("en-GB");
     return (
       <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
@@ -29,7 +29,7 @@ export default function AccessBanner({ status, trialEndsAt, subscriptionEndsAt, 
   }
 
   if (status === "expiring" && subscriptionEndsAt) {
-    const endDate = new Date(subscriptionEndsAt).toLocaleDateString();
+    const endDate = new Date(subscriptionEndsAt).toLocaleDateString("en-GB");
     return (
       <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">

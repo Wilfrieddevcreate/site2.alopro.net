@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 
-function FlagImg({ code, size = 20 }: { code: string; size?: number }) {
-  return <img src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`} alt={code} width={size} height={Math.round(size * 0.75)} className="inline-block rounded-sm object-cover" style={{ width: size, height: Math.round(size * 0.75) }} />;
+function FlagImg({ code }: { code: string; size?: number }) {
+  return <span className={`fi fi-${code.toLowerCase()} inline-block w-5 h-4 rounded-sm`} style={{ backgroundSize: "cover" }} />;
 }
 
 const COUNTRIES = [

@@ -73,10 +73,10 @@ export async function POST(request: Request) {
       let statusMsg = `✅ Connected to: ${user.firstName} ${user.lastName}\n📧 ${user.email}\n\n`;
       if (activeSub) {
         statusMsg += `📊 Subscription: ${activeSub.type} (Active)\n`;
-        statusMsg += `📅 Expires: ${activeSub.currentPeriodEnd.toLocaleDateString()}\n`;
+        statusMsg += `📅 Expires: ${activeSub.currentPeriodEnd.toLocaleDateString("en-GB")}\n`;
         statusMsg += `\n✅ You will receive signals and news.`;
       } else if (trialActive) {
-        statusMsg += `⏳ Free trial until: ${user.trialEndsAt!.toLocaleDateString()}\n`;
+        statusMsg += `⏳ Free trial until: ${user.trialEndsAt!.toLocaleDateString("en-GB")}\n`;
         statusMsg += `\n✅ You will receive signals and news during your trial.`;
       } else {
         statusMsg += `❌ No active subscription.\n`;

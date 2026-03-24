@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const pageWidth = doc.internal.pageSize.getWidth();
 
   // Colors
-  const primary = [26, 186, 240]; // #1ABAF0
+  const primary = [20, 112, 142]; // #14708E
   const dark = [30, 30, 30];
   const gray = [120, 120, 120];
   const lightGray = [200, 200, 200];

@@ -4,6 +4,7 @@ import { prisma } from "@/app/lib/prisma";
 import Sidebar from "./components/Sidebar";
 import DashboardHeader from "./components/DashboardHeader";
 import AccessBanner from "./components/AccessBanner";
+import PwaInstallPrompt from "./components/PwaInstallPrompt";
 
 function daysBetween(a: Date, b: Date) {
   return Math.ceil((b.getTime() - a.getTime()) / 86400000);
@@ -87,6 +88,7 @@ export default async function DashboardLayout({
           </main>
         </div>
       </div>
+      <PwaInstallPrompt />
     </div>
   );
 }

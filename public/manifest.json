@@ -1,12 +1,15 @@
 {
+  "id": "/kodex",
   "name": "Kodex - Crypto Signals",
   "short_name": "Kodex",
   "description": "Professional crypto trading signals & managed trading platform",
   "start_url": "/en/dashboard",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#14708E",
   "orientation": "portrait-primary",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/assets/images/logo_kodex.png",
@@ -21,6 +24,7 @@
       "purpose": "any maskable"
     }
   ],
+  "screenshots": [],
   "categories": ["finance", "business"],
   "lang": "en",
   "dir": "ltr"

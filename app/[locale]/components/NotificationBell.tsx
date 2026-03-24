@@ -8,6 +8,7 @@ interface NotificationData {
   title: string;
   message: string;
   type: string;
+  link: string | null;
   read: boolean;
   createdAt: string;
 }
@@ -104,7 +105,7 @@ export default function NotificationBell() {
               preview.map((n) => (
                 <Link
                   key={n.id}
-                  href={isAdmin ? "/admin" : `/dashboard/notifications/${n.id}`}
+                  href={n.link || (isAdmin ? "/admin" : "/dashboard/notifications")}
                   onClick={() => setOpen(false)}
                   className={`block px-4 py-3 border-b border-white/5 transition-colors hover:bg-white/[0.04] ${!n.read ? "bg-white/[0.03]" : ""}`}
                 >
@@ -114,7 +115,7 @@ export default function NotificationBell() {
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className={`text-xs font-semibold uppercase ${typeIcon[n.type] || "text-white/40"}`}>{n.type}</span>
                         <span className="text-[10px] text-white/20">
-                          {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          {new Date(n.createdAt).toLocaleDateString("en-GB")} {new Date(n.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
                       <p className="text-sm font-medium text-white leading-snug truncate">{n.title}</p>

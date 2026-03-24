@@ -3,12 +3,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "@/app/i18n/navigation";
 import { useLocale } from "next-intl";
+import FlagIcon from "./FlagIcon";
 
 const LANGUAGES = [
-  { code: "fr", name: "Français", flag: "🇫🇷" },
-  { code: "en", name: "English", flag: "🇬🇧" },
-  { code: "es", name: "Español", flag: "🇪🇸" },
-  { code: "tr", name: "Türkçe", flag: "🇹🇷" },
+  { code: "fr", name: "Français", country: "FR" },
+  { code: "en", name: "English", country: "GB" },
+  { code: "es", name: "Español", country: "ES" },
+  { code: "tr", name: "Türkçe", country: "TR" },
 ] as const;
 
 export default function LanguageSelector({ variant = "dark" }: { variant?: "dark" | "light" }) {
@@ -47,7 +48,7 @@ export default function LanguageSelector({ variant = "dark" }: { variant?: "dark
             : "border-gray-300 text-gray-700 hover:bg-gray-100"
         }`}
       >
-        <span className="text-base">{selected.flag}</span>
+        <FlagIcon code={selected.country} size="sm" />
         <span>{selected.code.toUpperCase()}</span>
         <svg
           className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
@@ -77,7 +78,7 @@ export default function LanguageSelector({ variant = "dark" }: { variant?: "dark
                   : `hover:bg-gray-100 ${locale === lang.code ? "text-primary" : "text-gray-700"}`
               }`}
             >
-              <span className="text-base">{lang.flag}</span>
+              <FlagIcon code={lang.country} size="sm" />
               <span>{lang.name}</span>
             </button>
           ))}

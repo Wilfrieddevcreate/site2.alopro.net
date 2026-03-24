@@ -243,7 +243,7 @@ export default function AffiliationPage() {
               <div key={w.id} className="flex items-center justify-between px-5 py-3">
                 <div>
                   <div className="text-sm font-medium text-white">{w.amount.toFixed(2)}€</div>
-                  <div className="text-xs text-white/25">{w.paymentMethod} · {new Date(w.createdAt).toLocaleDateString()}</div>
+                  <div className="text-xs text-white/25">{w.paymentMethod} · {new Date(w.createdAt).toLocaleDateString("en-GB")}</div>
                 </div>
                 <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase ${
                   w.status === "COMPLETED" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :
@@ -318,7 +318,7 @@ export default function AffiliationPage() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{ref.name.charAt(0)}</div>
                     <div>
                       <div className="text-sm font-medium text-white">{ref.name}</div>
-                      <div className="text-xs text-white/25">{new Date(ref.date).toLocaleDateString()}</div>
+                      <div className="text-xs text-white/25">{new Date(ref.date).toLocaleDateString("en-GB")}</div>
                     </div>
                   </div>
                   <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase ${ref.hasSubscription ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-amber-500/10 border-amber-500/20 text-amber-400"}`}>
@@ -370,7 +370,7 @@ export default function AffiliationPage() {
                     )}
                   </div>
                   <div className="text-right text-xs text-white/25">
-                    {c.status === "CANCELLED" ? (c.cancelReason || "—") : new Date(c.maturesAt).toLocaleDateString()}
+                    {c.status === "CANCELLED" ? (c.cancelReason || "—") : new Date(c.maturesAt).toLocaleDateString("en-GB")}
                   </div>
                 </div>
               ))}
@@ -391,7 +391,7 @@ export default function AffiliationPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-primary">{c.commissionAmount.toFixed(2)}€ <span className="text-xs text-white/20">({(c.commissionRate * 100).toFixed(0)}%)</span></span>
-                  <span className="text-xs text-white/25">{c.status === "CANCELLED" ? (c.cancelReason || "—") : new Date(c.maturesAt).toLocaleDateString()}</span>
+                  <span className="text-xs text-white/25">{c.status === "CANCELLED" ? (c.cancelReason || "—") : new Date(c.maturesAt).toLocaleDateString("en-GB")}</span>
                 </div>
               </div>
             ))}

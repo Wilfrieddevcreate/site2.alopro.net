@@ -88,11 +88,11 @@
       "news": "Noticias",
       "tutorials": "Tutoriales",
       "managed": "Trading Gestionado",
-      "managed": "Trading Gestionado",
       "affiliation": "Afiliación",
       "subscription": "Suscripción",
       "invoices": "Facturas",
-      "settings": "Configuración"
+      "settings": "Configuración",
+      "logout": "Cerrar sesión"
     },
     "header": {
       "logout": "Cerrar sesión"

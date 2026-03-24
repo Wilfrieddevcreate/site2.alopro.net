@@ -73,7 +73,7 @@ export default async function AdminDashboard() {
                   {u.emailVerified && isTrialActive && (
                     <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-amber-400">Trial</span>
                   )}
-                  <span className="text-xs text-white/20">{u.createdAt.toLocaleDateString()}</span>
+                  <span className="text-xs text-white/20">{u.createdAt.toLocaleDateString("en-GB")}</span>
                 </div>
               </div>
             );

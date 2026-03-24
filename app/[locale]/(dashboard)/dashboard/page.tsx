@@ -40,7 +40,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
 
   const [activeCalls, latestNews] = await Promise.all([
     showSignalsContent ? prisma.call.findMany({
-      where: { active: true },
       orderBy: { createdAt: "desc" },
       include: {
         tradingPair: true,
@@ -67,6 +66,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         entryMin: c.entryMin,
         entryMax: c.entryMax,
         stopLoss: c.stopLoss,
+        active: c.active,
         targets: c.targets.map((t) => ({ rank: t.rank, price: t.price, reached: t.reached })),
         createdAt: c.createdAt.toISOString(),
       }))}

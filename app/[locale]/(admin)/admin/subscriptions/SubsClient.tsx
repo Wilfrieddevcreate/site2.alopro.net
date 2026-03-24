@@ -114,7 +114,7 @@ export default function SubsClient({ stats, subscriptions }: { stats: Stats; sub
                     </td>
                     <td className="px-5 py-4 text-sm font-semibold text-white">{s.amount.toFixed(2)}€</td>
                     <td className="px-5 py-4 text-xs text-white/40">
-                      {new Date(s.periodStart).toLocaleDateString()} — {new Date(s.periodEnd).toLocaleDateString()}
+                      {new Date(s.periodStart).toLocaleDateString("en-GB")} — {new Date(s.periodEnd).toLocaleDateString("en-GB")}
                     </td>
                     <td className="px-5 py-4 text-xs font-mono text-primary">{s.invoiceNumber || "—"}</td>
                   </tr>

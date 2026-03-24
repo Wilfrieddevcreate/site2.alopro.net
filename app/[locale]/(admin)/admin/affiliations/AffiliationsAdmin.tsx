@@ -81,7 +81,7 @@ export default function AffiliationsAdmin() {
               <div key={a.id} className="card-dark p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <div className="text-sm font-medium text-white">{a.userName}</div>
-                  <div className="text-xs text-white/25">{a.userEmail} — {new Date(a.createdAt).toLocaleDateString()}</div>
+                  <div className="text-xs text-white/25">{a.userEmail} — {new Date(a.createdAt).toLocaleDateString("en-GB")}</div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => handleAction(a.id, "APPROVED")} className="rounded-xl bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/25 transition-colors">Approve</button>

@@ -63,7 +63,7 @@ export default function NotificationDetail({ notification, relatedCall, relatedN
             <h1 className="text-lg font-bold text-white mt-1">{notification.title}</h1>
             <p className="text-sm text-white/40 mt-2 leading-relaxed">{notification.message}</p>
             <p className="text-xs text-white/15 mt-3">
-              {new Date(notification.createdAt).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} at {new Date(notification.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {new Date(notification.createdAt).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} at {new Date(notification.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
         </div>
@@ -83,7 +83,7 @@ export default function NotificationDetail({ notification, relatedCall, relatedN
               </div>
               <div>
                 <span className="text-lg font-bold text-white">{relatedCall.pair}</span>
-                <div className="text-xs text-white/25">{new Date(relatedCall.createdAt).toLocaleDateString()}</div>
+                <div className="text-xs text-white/25">{new Date(relatedCall.createdAt).toLocaleDateString("en-GB")}</div>
               </div>
             </div>
             <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${relatedCall.active ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/30"}`}>
@@ -136,7 +136,7 @@ export default function NotificationDetail({ notification, relatedCall, relatedN
           <div className="px-6 pb-6">
             <h3 className="text-lg font-bold text-white mb-2">{relatedNews.title}</h3>
             <p className="text-sm text-white/40 leading-relaxed">{relatedNews.description}</p>
-            <p className="text-xs text-white/15 mt-3">{new Date(relatedNews.createdAt).toLocaleDateString()}</p>
+            <p className="text-xs text-white/15 mt-3">{new Date(relatedNews.createdAt).toLocaleDateString("en-GB")}</p>
           </div>
         </div>
       )}

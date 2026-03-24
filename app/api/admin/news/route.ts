@@ -55,8 +55,9 @@ export async function POST(request: Request) {
     });
 
     // Notifications
-    notifyBroadcast(`New Article: ${title}`, description.slice(0, 100) + (description.length > 100 ? "..." : ""), "news").catch(console.error);
-    sendPushToAll({ title: "New Article", message: title, url: "/dashboard" }).catch(console.error);
+    const newsLink = `/dashboard?tab=news&newsId=${news.id}`;
+    notifyBroadcast(`New Article: ${title}`, description.slice(0, 100) + (description.length > 100 ? "..." : ""), "news", newsLink).catch(console.error);
+    sendPushToAll({ title: "New Article", message: title, url: newsLink }).catch(console.error);
     sendNewsToTelegram({ title, description }).catch(console.error);
 
     return NextResponse.json({ news });

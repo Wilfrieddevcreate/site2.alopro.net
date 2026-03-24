@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import NewsDetailModal from "@/app/[locale]/components/NewsDetailModal";
 
 interface CallData {
   id: string;
@@ -9,6 +11,7 @@ interface CallData {
   entryMin: number;
   entryMax: number;
   stopLoss: number;
+  active: boolean;
   targets: { rank: number; price: number; reached: boolean }[];
   createdAt: string;
 }
@@ -41,9 +44,77 @@ export default function DashboardContent({
   latestNews,
 }: DashboardContentProps) {
   const t = useTranslations("dashboard.home");
-  const [activeTab, setActiveTab] = useState<"calls" | "news">("calls");
+  const locale = useLocale();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const callIdParam = searchParams.get("callId");
+  const newsIdParam = searchParams.get("newsId");
+  const [activeTab, setActiveTab] = useState<"calls" | "news">(tabParam === "news" ? "news" : "calls");
+  const [highlightId, setHighlightId] = useState<string | null>(callIdParam || newsIdParam || null);
+  const [pairFilter, setPairFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [selectedNews, setSelectedNews] = useState<{ id: string; title: string; description: string; images: string[]; date: string } | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState<string | null>(null);
+
+  // Auto-open news detail if newsId in URL
+  useEffect(() => {
+    if (newsIdParam && tabParam === "news") {
+      const news = latestNews.find((n) => n.id === newsIdParam);
+      if (news) openNewsDetail(news);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newsIdParam]);
+
+  // Scroll to highlighted call
+  useEffect(() => {
+    if (highlightId) {
+      setTimeout(() => {
+        const el = document.getElementById(`item-${highlightId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add("ring-2", "ring-primary", "ring-offset-2", "ring-offset-black");
+          setTimeout(() => {
+            el.classList.remove("ring-2", "ring-primary", "ring-offset-2", "ring-offset-black");
+            setHighlightId(null);
+          }, 3000);
+        }
+      }, 300);
+    }
+  }, [highlightId, activeTab]);
+
+  async function openNewsDetail(n: NewsData) {
+    setLoadingDetail(n.id);
+    try {
+      const res = await fetch(`/api/user/news/${n.id}?locale=${locale}`);
+      const data = await res.json();
+      setSelectedNews({
+        id: n.id,
+        title: data.title || n.title,
+        description: data.description || n.description,
+        images: data.images || (n.imageUrl ? [n.imageUrl] : []),
+        date: n.createdAt,
+      });
+    } catch {
+      setSelectedNews({
+        id: n.id, title: n.title, description: n.description,
+        images: n.imageUrl ? [n.imageUrl] : [], date: n.createdAt,
+      });
+    }
+    setLoadingDetail(null);
+  }
 
   const isManagedOnly = hasActiveSubscription && subscriptionType === "MANAGED";
+
+  // Get unique pairs for filter
+  const uniquePairs = Array.from(new Set(activeCalls.map((c) => c.pair))).sort();
+
+  // Filter calls
+  const filteredCalls = activeCalls.filter((c) => {
+    if (pairFilter !== "all" && c.pair !== pairFilter) return false;
+    if (statusFilter === "active" && !c.active) return false;
+    if (statusFilter === "inactive" && c.active) return false;
+    return true;
+  });
 
   return (
     <div className="pt-8 lg:pt-0">
@@ -112,11 +183,11 @@ export default function DashboardContent({
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22" />
             </svg>
-            {t("activeCalls")}
+            Calls
             <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
               activeTab === "calls" ? "bg-white/20 text-white" : "bg-white/5 text-white/25"
             }`}>
-              {activeCalls.length}
+              {filteredCalls.length}
             </span>
           </button>
 
@@ -132,7 +203,7 @@ export default function DashboardContent({
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5" />
             </svg>
-            {t("latestNews")}
+            News
             <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
               activeTab === "news" ? "bg-white/20 text-white" : "bg-white/5 text-white/25"
             }`}>
@@ -151,10 +222,34 @@ export default function DashboardContent({
       {/* Calls tab */}
       {activeTab === "calls" && (
         <div>
-          {activeCalls.length > 0 ? (
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 mb-5">
+            <select
+              value={pairFilter}
+              onChange={(e) => setPairFilter(e.target.value)}
+              className="rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-sm text-white outline-none focus:border-primary cursor-pointer"
+            >
+              <option value="all" className="bg-black">All pairs</option>
+              {uniquePairs.map((pair) => (
+                <option key={pair} value={pair} className="bg-black">{pair}</option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
+              className="rounded-xl bg-white/5 border border-white/10 px-4 py-2 text-sm text-white outline-none focus:border-primary cursor-pointer"
+            >
+              <option value="all" className="bg-black">All status</option>
+              <option value="active" className="bg-black">Active</option>
+              <option value="inactive" className="bg-black">Inactive</option>
+            </select>
+          </div>
+
+          {filteredCalls.length > 0 ? (
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-              {activeCalls.map((call) => (
-                <div key={call.id} className="card-dark p-5">
+              {filteredCalls.map((call) => (
+                <div key={call.id} id={`item-${call.id}`} className="card-dark p-5 transition-all duration-500">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
@@ -164,7 +259,12 @@ export default function DashboardContent({
                       </div>
                       <span className="text-base font-bold text-white">{call.pair}</span>
                     </div>
-                    <span className="text-xs text-white/25">{new Date(call.createdAt).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${call.active ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-white/25"}`}>
+                        {call.active ? "Active" : "Closed"}
+                      </span>
+                      <span className="text-xs text-white/25">{new Date(call.createdAt).toLocaleDateString("en-GB")}</span>
+                    </div>
                   </div>
 
                   <div className="mb-4 rounded-xl bg-white/5 p-3.5">
@@ -173,23 +273,32 @@ export default function DashboardContent({
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    {call.targets.map((tp) => (
-                      <div key={tp.rank} className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${tp.reached ? "bg-emerald-500/10" : "bg-white/[0.02]"}`}>
-                        <span className={`font-semibold ${tp.reached ? "text-emerald-400" : "text-white/40"}`}>
-                          TP{tp.rank}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${tp.reached ? "text-emerald-400" : "text-white/70"}`}>{tp.price}</span>
-                          {tp.reached && (
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
-                              <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                              </svg>
-                            </div>
-                          )}
+                    {call.targets.map((tp) => {
+                      const entryMid = (call.entryMin + call.entryMax) / 2;
+                      const gainPct = ((tp.price - entryMid) / entryMid * 100).toFixed(1);
+                      return (
+                        <div key={tp.rank} className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${tp.reached ? "bg-emerald-500/10" : "bg-white/[0.02]"}`}>
+                          <div className="flex items-center gap-2">
+                            <span className={`font-semibold ${tp.reached ? "text-emerald-400" : "text-white/40"}`}>
+                              TP{tp.rank}
+                            </span>
+                            <span className={`text-[10px] font-bold rounded px-1.5 py-0.5 ${tp.reached ? "bg-emerald-500/20 text-emerald-300" : "bg-white/5 text-white/25"}`}>
+                              +{gainPct}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`font-medium ${tp.reached ? "text-emerald-400" : "text-white/70"}`}>{tp.price}</span>
+                            {tp.reached && (
+                              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="flex items-center justify-between rounded-xl bg-red-500/10 px-3.5 py-2.5 text-sm">
@@ -218,15 +327,22 @@ export default function DashboardContent({
           {latestNews.length > 0 ? (
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
               {latestNews.map((news) => (
-                <div key={news.id} className="card-dark overflow-hidden group cursor-pointer">
-                  <div className="h-44 bg-white/5 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                <div key={news.id} id={`item-${news.id}`} onClick={() => openNewsDetail(news)} className="card-dark overflow-hidden group cursor-pointer hover:border-primary/20 transition-all duration-500">
+                  <div className="h-44 bg-white/5 overflow-hidden relative">
                     <img src={news.imageUrl} alt={news.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                    {loadingDetail === news.id && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
                   </div>
                   <div className="p-5">
                     <h3 className="font-semibold text-white leading-snug">{news.title}</h3>
                     <p className="mt-2 text-sm text-white/40 line-clamp-2 leading-relaxed">{news.description}</p>
-                    <p className="mt-3 text-xs text-white/20">{new Date(news.createdAt).toLocaleDateString()}</p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-xs text-white/20">{new Date(news.createdAt).toLocaleDateString("en-GB")}</p>
+                      <span className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">Read more →</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -246,6 +362,9 @@ export default function DashboardContent({
       </div>{/* Close tab content panel */}
       </>
       )}
+
+      {/* News Detail Modal */}
+      <NewsDetailModal news={selectedNews} onClose={() => setSelectedNews(null)} />
     </div>
   );
 }
