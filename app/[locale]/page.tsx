@@ -39,7 +39,7 @@ export default function Home() {
           <span className="text-primary">{t("titleBreak")}</span>
         </h1>
 
-        <p className="relative mb-10 max-w-lg text-base leading-relaxed text-white/60 sm:text-lg">
+        <p className="relative mb-8 max-w-lg text-base leading-relaxed text-white/60 sm:text-lg">
           {t("subtitle")}
         </p>
 
