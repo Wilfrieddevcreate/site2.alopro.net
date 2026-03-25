@@ -159,8 +159,9 @@ model Call {
   tradingPairId String
   entryMin      Float   // Montant d'entrée minimum
   entryMax      Float   // Montant d'entrée maximum
-  stopLoss      Float
-  active        Boolean @default(true) // Activé/désactivé par l'admin
+  stopLoss         Float
+  stopLossReached  Boolean @default(false)
+  active           Boolean @default(true) // Activé/désactivé par l'admin
 
   telegramSent  Boolean @default(false) // Message Telegram envoyé ?
 

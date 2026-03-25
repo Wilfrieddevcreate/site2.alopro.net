@@ -12,6 +12,7 @@ interface CallData {
   entryMin: number;
   entryMax: number;
   stopLoss: number;
+  stopLossReached: boolean;
   active: boolean;
   targets: { rank: number; price: number; reached: boolean }[];
   createdAt: string;
@@ -224,8 +225,8 @@ export default function DashboardContent({
       {activeTab === "calls" && (
         <div>
           {/* Filters */}
-          <div className="flex flex-wrap gap-3 mb-5">
-            <div className="w-48">
+          <div className="flex gap-3 mb-5">
+            <div className="flex-1 min-w-0 max-w-[200px]">
               <CustomSelect
                 options={[
                   { value: "all", label: "All pairs" },
@@ -238,7 +239,7 @@ export default function DashboardContent({
               />
             </div>
 
-            <div className="w-40">
+            <div className="flex-1 min-w-0 max-w-[160px]">
               <CustomSelect
                 options={[
                   { value: "all", label: "All status" },
@@ -295,6 +296,7 @@ export default function DashboardContent({
                           </div>
                           <div className="flex items-center gap-2">
                             <span className={`font-medium ${tp.reached ? "text-emerald-400" : "text-white/70"}`}>{tp.price}</span>
+                            <span className={`text-xs ${tp.reached ? "text-emerald-400/60" : "text-white/30"}`}>({((tp.price - (call.entryMin + call.entryMax) / 2) / ((call.entryMin + call.entryMax) / 2) * 100).toFixed(1)}%)</span>
                             {tp.reached && (
                               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
                                 <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -308,9 +310,21 @@ export default function DashboardContent({
                     })}
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl bg-red-500/10 px-3.5 py-2.5 text-sm">
-                    <span className="font-semibold text-red-400">{t("stopLoss")}</span>
-                    <span className="font-bold text-red-400">{call.stopLoss}</span>
+                  <div className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm ${call.stopLossReached ? "bg-red-500/20 border border-red-500/30" : "bg-red-500/10"}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-red-400">{t("stopLoss")}</span>
+                      {call.stopLossReached && (
+                        <div className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500">
+                          <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-red-400">{call.stopLoss}</span>
+                      <span className="text-xs text-red-400/60">({(((call.stopLoss - (call.entryMin + call.entryMax) / 2) / ((call.entryMin + call.entryMax) / 2)) * 100).toFixed(1)}%)</span>
+                    </div>
                   </div>
                 </div>
               ))}

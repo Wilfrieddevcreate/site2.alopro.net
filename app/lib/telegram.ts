@@ -172,10 +172,29 @@ export async function sendCallToTelegram(call: {
   await sendBatch(token, messages);
 }
 
+// ─── SEND MEDIA GROUP (multiple photos) ─────────────────
+async function sendMediaGroupToChat(token: string, chatId: string, photoUrls: string[], caption?: string) {
+  const url = `https://api.telegram.org/bot${token}/sendMediaGroup`;
+  const media = photoUrls.map((photo, i) => ({
+    type: "photo" as const,
+    media: photo,
+    ...(i === 0 && caption ? { caption, parse_mode: "HTML" as const } : {}),
+  }));
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, media }),
+  });
+
+  if (!res.ok) await handleTelegramError(res, chatId);
+}
+
 // ─── SEND NEWS ──────────────────────────────────────────
 export async function sendNewsToTelegram(news: {
   title: string;
   description: string;
+  images?: string[];
   imageUrl?: string | null;
   titleFr?: string | null;
   titleEn?: string | null;
@@ -194,40 +213,65 @@ export async function sendNewsToTelegram(news: {
 
   console.log(`Sending news to ${users.length} subscribers`);
 
-  const messages = users.map((user) => {
-    const t = getTgMessages(user.language);
-    const lang = user.language.toUpperCase();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // Use translated content if available, fallback to default
-    let title = news.title;
-    let description = news.description;
-
-    if (lang === "FR" && news.titleFr) { title = news.titleFr; description = news.descriptionFr || description; }
-    else if (lang === "EN" && news.titleEn) { title = news.titleEn; description = news.descriptionEn || description; }
-    else if (lang === "ES" && news.titleEs) { title = news.titleEs; description = news.descriptionEs || description; }
-    else if (lang === "TR" && news.titleTr) { title = news.titleTr; description = news.descriptionTr || description; }
-
-    // Caption limit for photos is 1024 chars, so keep it shorter
-    const descSnippet = description.slice(0, 200) + (description.length > 200 ? "..." : "");
-
-    const text =
-      `📰 <b>${t.news}</b>\n\n` +
-      `<b>${title}</b>\n\n` +
-      `${descSnippet}\n\n` +
-      `━━━━━━━━━━━━━━━\n` +
-      `<b>KODEX</b> — ${t.cryptoNews}`;
-
-    // Build full image URL for Telegram (needs absolute URL)
-    let photoUrl: string | undefined;
-    if (news.imageUrl) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      photoUrl = news.imageUrl.startsWith("http") ? news.imageUrl : `${appUrl}${news.imageUrl}`;
+  // Build full image URLs
+  const allImages: string[] = [];
+  if (news.images && news.images.length > 0) {
+    for (const img of news.images) {
+      allImages.push(img.startsWith("http") ? img : `${appUrl}${img}`);
     }
+  } else if (news.imageUrl) {
+    allImages.push(news.imageUrl.startsWith("http") ? news.imageUrl : `${appUrl}${news.imageUrl}`);
+  }
 
-    return { chatId: user.telegramChatId, text, photoUrl };
-  });
+  const BATCH_SIZE = 20;
 
-  await sendBatch(token, messages);
+  for (let i = 0; i < users.length; i += BATCH_SIZE) {
+    const batch = users.slice(i, i + BATCH_SIZE);
+
+    await Promise.all(batch.map(async (user) => {
+      const t = getTgMessages(user.language);
+      const lang = user.language.toUpperCase();
+
+      let title = news.title;
+      let description = news.description;
+
+      if (lang === "FR" && news.titleFr) { title = news.titleFr; description = news.descriptionFr || description; }
+      else if (lang === "EN" && news.titleEn) { title = news.titleEn; description = news.descriptionEn || description; }
+      else if (lang === "ES" && news.titleEs) { title = news.titleEs; description = news.descriptionEs || description; }
+      else if (lang === "TR" && news.titleTr) { title = news.titleTr; description = news.descriptionTr || description; }
+
+      const text =
+        `📰 <b>${t.news}</b>\n\n` +
+        `<b>${title}</b>\n\n` +
+        `${description}\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `<b>KODEX</b> — ${t.cryptoNews}`;
+
+      if (allImages.length > 1) {
+        // Multiple images: send as album first, then full text
+        await sendMediaGroupToChat(token, user.telegramChatId, allImages);
+        await sendMessageToChat(token, user.telegramChatId, text);
+      } else if (allImages.length === 1) {
+        // Single image: if text is short enough, send as photo with caption
+        if (text.length <= 1024) {
+          await sendPhotoToChat(token, user.telegramChatId, allImages[0], text);
+        } else {
+          // Text too long for caption: send photo then text separately
+          await sendPhotoToChat(token, user.telegramChatId, allImages[0], `📰 <b>${title}</b>`);
+          await sendMessageToChat(token, user.telegramChatId, text);
+        }
+      } else {
+        // No images: just text
+        await sendMessageToChat(token, user.telegramChatId, text);
+      }
+    }));
+
+    if (i + BATCH_SIZE < users.length) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
 }
 
 // ─── SEND TP REACHED ────────────────────────────────────
@@ -257,6 +301,41 @@ export async function sendTpReachedToTelegram(call: {
       `✅ <b>${t.targetReached}</b>\n\n` +
       `📊 <b>${call.pair}</b>\n` +
       `🎯 TP${call.tpRank}: <b>${call.tpPrice}</b> (${sign}${pct}%) ✅\n\n` +
+      `━━━━━━━━━━━━━━━\n` +
+      `<b>KODEX</b> — ${t.cryptoSignals}`;
+
+    return { chatId: user.telegramChatId, text };
+  });
+
+  await sendBatch(token, messages);
+}
+
+// ─── SEND STOP LOSS REACHED ─────────────────────────────
+export async function sendStopLossReachedToTelegram(call: {
+  pair: string;
+  stopLoss: number;
+  entryMin: number;
+  entryMax: number;
+}) {
+  const token = await getBotToken();
+  if (!token) return;
+
+  const users = await getActiveSubscribersWithTelegram();
+  if (users.length === 0) return;
+
+  console.log(`Sending SL reached for ${call.pair} to ${users.length} subscribers`);
+
+  const avgEntry = (call.entryMin + call.entryMax) / 2;
+  const pct = ((call.stopLoss - avgEntry) / avgEntry * 100).toFixed(1);
+
+  const messages = users.map((user) => {
+    const t = getTgMessages(user.language);
+
+    const text =
+      `🛑 <b>${t.stopLossHit}</b>\n\n` +
+      `📊 <b>${call.pair}</b>\n` +
+      `🛑 ${t.stopLoss}: <b>${call.stopLoss}</b> (${pct}%) ❌\n\n` +
+      `${t.positionClosed}\n\n` +
       `━━━━━━━━━━━━━━━\n` +
       `<b>KODEX</b> — ${t.cryptoSignals}`;
 

@@ -60,6 +60,7 @@ export async function POST(request: Request) {
     sendPushToAll({ title: "New Article", message: title, url: newsLink }).catch(console.error);
     sendNewsToTelegram({
       title, description,
+      images: imageUrls || [],
       imageUrl: imageUrls[0] || null,
       titleFr: titleFr || null, titleEn: title, titleEs: titleEs || null, titleTr: titleTr || null,
       descriptionFr: descriptionFr || null, descriptionEn: description, descriptionEs: descriptionEs || null, descriptionTr: descriptionTr || null,

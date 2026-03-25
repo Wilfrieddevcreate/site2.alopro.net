@@ -5,6 +5,8 @@ export const TG_MESSAGES: Record<string, {
   entry: string;
   targets: string;
   stopLoss: string;
+  stopLossHit: string;
+  positionClosed: string;
   news: string;
   targetReached: string;
   cryptoSignals: string;
@@ -15,6 +17,8 @@ export const TG_MESSAGES: Record<string, {
     entry: "Entry",
     targets: "Targets",
     stopLoss: "Stop Loss",
+    stopLossHit: "STOP LOSS HIT",
+    positionClosed: "Position closed.",
     news: "NEWS",
     targetReached: "TARGET REACHED",
     cryptoSignals: "Crypto Signals",
@@ -25,6 +29,8 @@ export const TG_MESSAGES: Record<string, {
     entry: "Entrée",
     targets: "Objectifs",
     stopLoss: "Stop Loss",
+    stopLossHit: "STOP LOSS ATTEINT",
+    positionClosed: "Position fermée.",
     news: "ACTUALITÉ",
     targetReached: "OBJECTIF ATTEINT",
     cryptoSignals: "Signaux Crypto",
@@ -35,6 +41,8 @@ export const TG_MESSAGES: Record<string, {
     entry: "Entrada",
     targets: "Objetivos",
     stopLoss: "Stop Loss",
+    stopLossHit: "STOP LOSS ALCANZADO",
+    positionClosed: "Posición cerrada.",
     news: "NOTICIAS",
     targetReached: "OBJETIVO ALCANZADO",
     cryptoSignals: "Señales Crypto",
@@ -45,6 +53,8 @@ export const TG_MESSAGES: Record<string, {
     entry: "Giriş",
     targets: "Hedefler",
     stopLoss: "Zarar Durdur",
+    stopLossHit: "ZARAR DURDUR ULAŞILDI",
+    positionClosed: "Pozisyon kapatıldı.",
     news: "HABER",
     targetReached: "HEDEF ULAŞILDI",
     cryptoSignals: "Kripto Sinyalleri",
