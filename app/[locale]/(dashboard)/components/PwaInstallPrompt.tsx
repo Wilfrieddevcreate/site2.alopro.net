@@ -74,8 +74,8 @@ export default function PwaInstallPrompt() {
   }
 
   // iOS detection (no beforeinstallprompt on Safari)
-  const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isSafari = typeof navigator !== "undefined" && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+  const isIOS = typeof navigator !== "undefined" && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document));
+  const isSafari = typeof navigator !== "undefined" && /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
   const showIOSPrompt = isIOS && isSafari && !isInstalled && !dismissed;
 
   // Don't show if installed, dismissed, or no prompt available

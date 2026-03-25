@@ -9,7 +9,7 @@ const PAGE_SIZE = 20;
 
 interface CallData {
   id: string; pair: string; tradingPairId: string; entryMin: number; entryMax: number;
-  stopLoss: number; active: boolean; targets: { id: string; rank: number; price: number; reached: boolean }[];
+  stopLoss: number; stopLossReached: boolean; active: boolean; targets: { id: string; rank: number; price: number; reached: boolean }[];
   createdAt: string;
 }
 
@@ -22,6 +22,7 @@ export default function CallsAdmin({ pairs: initialPairs }: { pairs: { id: strin
   const [creating, setCreating] = useState(false);
   const [targets, setTargets] = useState([{ rank: 1, price: "" }]);
   const [markingTp, setMarkingTp] = useState<string | null>(null);
+  const [markingSl, setMarkingSl] = useState<string | null>(null);
   const [pairs, setPairs] = useState(initialPairs);
   const [pairSearch, setPairSearch] = useState("");
   const [selectedPairId, setSelectedPairId] = useState(initialPairs[0]?.id || "");
@@ -68,9 +69,9 @@ export default function CallsAdmin({ pairs: initialPairs }: { pairs: { id: strin
     try {
       const res = await fetch(`/api/admin/calls?skip=${page * PAGE_SIZE}&take=${PAGE_SIZE}`);
       const data = await res.json();
-      const items: CallData[] = (data.items || []).map((c: { id: string; tradingPair: { base: string; quote: string }; tradingPairId: string; entryMin: number; entryMax: number; stopLoss: number; active: boolean; createdAt: string; targets: { id: string; rank: number; price: number; reached: boolean }[] }) => ({
+      const items: CallData[] = (data.items || []).map((c: { id: string; tradingPair: { base: string; quote: string }; tradingPairId: string; entryMin: number; entryMax: number; stopLoss: number; stopLossReached?: boolean; active: boolean; createdAt: string; targets: { id: string; rank: number; price: number; reached: boolean }[] }) => ({
         id: c.id, pair: `${c.tradingPair.base}/${c.tradingPair.quote}`, tradingPairId: c.tradingPairId,
-        entryMin: c.entryMin, entryMax: c.entryMax, stopLoss: c.stopLoss, active: c.active,
+        entryMin: c.entryMin, entryMax: c.entryMax, stopLoss: c.stopLoss, stopLossReached: c.stopLossReached || false, active: c.active,
         targets: c.targets, createdAt: c.createdAt,
       }));
       setTotal(data.total || 0);
@@ -159,6 +160,29 @@ export default function CallsAdmin({ pairs: initialPairs }: { pairs: { id: strin
     } else {
       const data = await res.json();
       showError("Error", data.error || "Failed to mark TP");
+    }
+  }
+
+  async function markSlReached(callId: string, pair: string, stopLoss: number) {
+    const result = await Swal.fire({
+      title: "Stop Loss Hit?",
+      html: `<p style="color:#999;font-size:14px;"><b>${pair}</b> — SL at <b>${stopLoss}</b></p><p style="color:#666;font-size:12px;margin-top:8px;">This will deactivate the call and notify all users.</p>`,
+      icon: "warning", showCancelButton: true, confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#333", confirmButtonText: "Yes, SL hit!", cancelButtonText: "Cancel",
+      background: "#141419", color: "#fff",
+    });
+    if (!result.isConfirmed) return;
+    setMarkingSl(callId);
+    const res = await fetch("/api/admin/calls/sl-reached", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callId }),
+    });
+    setMarkingSl(null);
+    if (res.ok) {
+      showSuccess("Stop Loss Hit!", "Call deactivated. Users have been notified.");
+      reload();
+    } else {
+      const data = await res.json();
+      showError("Error", data.error || "Failed to mark SL");
     }
   }
 
@@ -274,6 +298,24 @@ export default function CallsAdmin({ pairs: initialPairs }: { pairs: { id: strin
                   )}
                 </div>
               ))}
+            </div>
+            {/* Stop Loss */}
+            <div className={`flex items-center justify-between rounded-xl px-3 py-2.5 mt-2 ${call.stopLossReached ? "bg-red-500/15 border border-red-500/20" : "bg-red-500/5 border border-white/5"}`}>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-semibold ${call.stopLossReached ? "text-red-400" : "text-red-400/50"}`}>Stop Loss</span>
+                <span className={`text-sm font-bold ${call.stopLossReached ? "text-red-400" : "text-white/50"}`}>{call.stopLoss}</span>
+              </div>
+              {call.stopLossReached ? (
+                <div className="flex items-center gap-1.5">
+                  <svg className="h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  <span className="text-[10px] font-semibold text-red-400 uppercase">Hit</span>
+                </div>
+              ) : (
+                <button onClick={() => markSlReached(call.id, call.pair, call.stopLoss)} disabled={markingSl === call.id}
+                  className="rounded-lg bg-red-500/15 border border-red-500/20 px-3 py-1 text-[10px] font-semibold text-red-400 hover:bg-red-500/25 transition-all disabled:opacity-50 cursor-pointer">
+                  {markingSl === call.id ? "..." : "Mark SL hit"}
+                </button>
+              )}
             </div>
             <div className="text-xs text-white/15 mt-3">{new Date(call.createdAt).toLocaleDateString("en-GB")}</div>
           </div>
