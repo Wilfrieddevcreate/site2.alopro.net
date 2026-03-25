@@ -57,7 +57,13 @@ export async function POST(request: Request) {
     }).catch(console.error);
 
     // Telegram DM to active subscribers
-    sendTpReachedToTelegram({ pair, tpRank: target.rank, tpPrice: target.price }).catch(console.error);
+    sendTpReachedToTelegram({
+      pair,
+      tpRank: target.rank,
+      tpPrice: target.price,
+      entryMin: target.call.entryMin,
+      entryMax: target.call.entryMax,
+    }).catch(console.error);
 
     return NextResponse.json({ message: `TP${target.rank} marked as reached`, pair, rank: target.rank });
   } catch (err) {

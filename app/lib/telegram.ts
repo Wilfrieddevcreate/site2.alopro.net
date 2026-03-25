@@ -145,16 +145,24 @@ export async function sendCallToTelegram(call: {
 
   console.log(`Sending call ${call.pair} to ${users.length} subscribers`);
 
+  const avgEntry = (call.entryMin + call.entryMax) / 2;
+
   const messages = users.map((user) => {
     const t = getTgMessages(user.language);
-    const tps = call.targets.map((tp) => `  🎯 TP${tp.rank}: <b>${tp.price}</b>`).join("\n");
+    const tps = call.targets.map((tp) => {
+      const pct = ((tp.price - avgEntry) / avgEntry * 100).toFixed(1);
+      const sign = tp.price >= avgEntry ? "+" : "";
+      return `  🎯 TP${tp.rank}: <b>${tp.price}</b> (${sign}${pct}%)`;
+    }).join("\n");
+
+    const slPct = ((call.stopLoss - avgEntry) / avgEntry * 100).toFixed(1);
 
     const text =
       `🚀 <b>${t.newSignal}</b>\n\n` +
       `📊 <b>${call.pair}</b>\n\n` +
       `💰 ${t.entry}: <b>${call.entryMin} — ${call.entryMax}</b>\n\n` +
       `${t.targets}:\n${tps}\n\n` +
-      `🛑 ${t.stopLoss}: <b>${call.stopLoss}</b>\n\n` +
+      `🛑 ${t.stopLoss}: <b>${call.stopLoss}</b> (${slPct}%)\n\n` +
       `━━━━━━━━━━━━━━━\n` +
       `<b>KODEX</b> — ${t.cryptoSignals}`;
 
@@ -227,6 +235,8 @@ export async function sendTpReachedToTelegram(call: {
   pair: string;
   tpRank: number;
   tpPrice: number;
+  entryMin: number;
+  entryMax: number;
 }) {
   const token = await getBotToken();
   if (!token) return;
@@ -236,13 +246,17 @@ export async function sendTpReachedToTelegram(call: {
 
   console.log(`Sending TP${call.tpRank} reached for ${call.pair} to ${users.length} subscribers`);
 
+  const avgEntry = (call.entryMin + call.entryMax) / 2;
+  const pct = ((call.tpPrice - avgEntry) / avgEntry * 100).toFixed(1);
+  const sign = call.tpPrice >= avgEntry ? "+" : "";
+
   const messages = users.map((user) => {
     const t = getTgMessages(user.language);
 
     const text =
       `✅ <b>${t.targetReached}</b>\n\n` +
       `📊 <b>${call.pair}</b>\n` +
-      `🎯 TP${call.tpRank}: <b>${call.tpPrice}</b> ✅\n\n` +
+      `🎯 TP${call.tpRank}: <b>${call.tpPrice}</b> (${sign}${pct}%) ✅\n\n` +
       `━━━━━━━━━━━━━━━\n` +
       `<b>KODEX</b> — ${t.cryptoSignals}`;
 
