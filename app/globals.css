@@ -9,6 +9,7 @@
   --foreground: #171717;
 }
 
+
 @theme inline {
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
